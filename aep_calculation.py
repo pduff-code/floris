@@ -279,5 +279,5 @@ def main():
                                                                   plot_rose = False)
     print(aep_GWh, wake_free_aep_GWh, percent_loss)
 
-main()
+#main()
     
