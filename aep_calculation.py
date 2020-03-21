@@ -10,6 +10,7 @@ import floris.tools.power_rose as pr
 import numpy as np
 import pandas as pd
 from math import sqrt, floor
+import os
 
 
 class aep_calc():
@@ -23,7 +24,7 @@ class aep_calc():
         
     def single_aep_value(self, lat, lon, wt_cap_MW, n_wt, plot_layout=False, 
                          wake_model='gauss', fwrop=None, plot_rose=False,
-                         grid_spc=7):
+                         grid_spc=7, wind_resource='old', turb_fold_path=None):
         """Single AEP value
         
         Calculates AEP for single set of input parameters. Returns waked and 
@@ -54,19 +55,29 @@ class aep_calc():
         percent_loss : Percent of wake_free_aep lost due to wakes
         """
         
-        # Setup floris object - might want to split this up later when have WT library
-        fi = wfct.floris_utilities.FlorisInterface('examples\example_input.json')
+        data_file_name = str(int(wt_cap_MW))+'MW.json'
+        if  turb_fold_path is None:
+            file_path = 'C:/Users/pduffy/Documents/repos/orca/ORCA/ORCA/library/turbines/ATB/PBturbines/'+data_file_name
+        else:
+            file_path = turb_fold_path+data_file_name
         
-        # Make a grid layout 
+        print(file_path)
+        if os.path.isfile(file_path):
+            fi = wfct.floris_utilities.FlorisInterface(file_path)
+        
+        # Make a grid layout
         D = fi.floris.farm.turbines[0].rotor_diameter
-        layout_x, layout_y =self.make_grid_layout(wt_cap_MW, n_wt, D, 
-                                                  grid_spc=grid_spc, 
-                                                  plant_cap_MW=600)
+        print(D)
+        h_hub = fi.floris.farm.turbines[0].hub_height
+        print(grid_spc)
+        layout_x, layout_y =self.make_grid_layout(n_wt, 
+                                                  D,
+                                                  grid_spc)
 
         # Set up the model and update the floris object
         fi.floris.farm.set_wake_model(wake_model)
         fi.reinitialize_flow_field(layout_array=(layout_x, layout_y),
-                                   wind_direction=270.0,wind_speed=8.0)
+                                   wind_direction=0.0,wind_speed=8.0)
         fi.calculate_wake()
         
         # Plot wf layout
@@ -76,44 +87,74 @@ class aep_calc():
                               yaw_angles=np.zeros(len(layout_x)), D=D)
             ax.set_title('Wind Farm Layout')
         
-        # Wind data (either from wind rose object, or from windtoolkit)
+        # Wind resource data filename
+        latstr = str(lat)
+        latstr = latstr.replace('.','_')
+        lonstr = str(lon)
+        lonstr = lonstr.replace('.','_')
+        hstr = str(h_hub)
+        hstr = hstr.replace('.','_')
+        resource_file_name = 'lat'+latstr+'long'+lonstr+'wtk.p'
+        resource_file = 'C:/Users/pduffy/Documents/repos/orca/ORCA/ORCA/library/wind_resource/'+wind_resource+'/'+hstr+'m/' +resource_file_name
+        print(resource_file)
+        # TODO: should add a mkdir-like command if the folder does not exist.   
+        
+        # Check for existing wind resource objects and which data to use ('old' refers to Wind Toolkit)
         wind_rose = rose.WindRose()
-        if fwrop is None:
+        if os.path.isfile(resource_file):
+            df = wind_rose.load(resource_file)
+            
+        elif wind_resource == 'old':
+            # Fetch the data from wind tookit
             print('Accessing Wind Toolkit...')
-            # fetch the data from wind tookit
             wd_list = np.arange(0,360,5) # 5 degree wd bins
-            ws_list = np.arange(0,26,1)  # 1 m/s ws bins
+            ws_list = np.arange(0,26,1)  # 1 m/s ws bins 
 
             df = wind_rose.import_from_wind_toolkit_hsds(lat,
                                                          lon,
-                                                         ht = 100,
+                                                         ht = h_hub, 
                                                          wd = wd_list,
                                                          ws = ws_list,
                                                          limit_month = None,
                                                          st_date = None,
                                                          en_date = None)
+            
+            # Save the wind rose object in ORCA/library/wind_resource/old/<height>m/
+            wind_rose.save(resource_file)
+            
         else:
-            df = wind_rose.load(fwrop)
-        
+            raise Exception('No existing FLORIS wind rose object for the new data at this position.')
+            
+        # Plot a wind rose
         if plot_rose:
             wind_rose.plot_wind_rose()
-            
+
         # Instantiate the Optimization object
         yaw_opt = YawOptimizationWindRose(fi, df.wd, df.ws,
                                        minimum_yaw_angle=0,
                                        maximum_yaw_angle=0,
-                                       minimum_ws=4.0,
-                                       maximum_ws=25.0)
-        
+                                       minimum_ws=4.0, 
+                                       maximum_ws=25.0) 
+
         # Determine baseline power with and without wakes
         df_base = yaw_opt.calc_baseline_power()
+
+
+        # If true save power data for use in Lookup Tables
+        savedata=False
         
+        if savedata:
+            lut_file_name = str(n_wt)+'WT_'+str(int(wt_cap_MW))+'MWturb_'+str(grid_spc)+'Dspacing.csv' 
+            # TODO: improve naming convention to include: plant rotation, wake model and wake summation method
+            
+            lut_file = 'C:/Users/pduffy/Documents/repos/orca/ORCA/ORCA/library/power_lookup_tables/ATB/PBturbines/'+lut_file_name
+            df_base.to_csv(lut_file, index=True)
         
         # Combine wind farm-level power into one dataframe
         df_power = pd.DataFrame({'ws':df.ws,'wd':df.wd, \
             'freq_val':df.freq_val,'power_no_wake':df_base.power_no_wake, \
             'power_baseline':df_base.power_baseline})
-        
+
         # Set up the power rose
         df_turbine_power_no_wake = pd.DataFrame([list(row) for row in df_base['turbine_power_no_wake']],
                                                  columns=[str(i) for i in range(1,n_wt+1)])
@@ -124,15 +165,15 @@ class aep_calc():
         df_turbine_power_baseline['ws'] = df.ws
         df_turbine_power_baseline['wd'] = df.wd
         case_name = 'Wind Farm'
-        power_rose = pr.PowerRose(case_name, df_power, df_turbine_power_no_wake, 
+        power_rose = pr.PowerRose(case_name, df_power, df_turbine_power_no_wake,
                                   df_turbine_power_baseline)
-        
+
         # Values to return
         wake_free_aep_GWh = power_rose.total_no_wake
         aep_GWh = power_rose.total_baseline
-        percent_loss = 100*power_rose.baseline_wake_loss
-        
-        return aep_GWh, wake_free_aep_GWh, percent_loss
+        wake_loss_decimal = power_rose.baseline_wake_loss
+
+        return aep_GWh, wake_free_aep_GWh, wake_loss_decimal
       
        
     def isPerfect(self, N): 
@@ -192,7 +233,7 @@ class aep_calc():
             return aboveN, diff1
      
     
-    def make_grid_layout(self, wt_cap_MW, n_wt, D, grid_spc, plant_cap_MW=600):
+    def make_grid_layout(self,n_wt, D, grid_spc):
         """Make a grid layout (close as possible to a square grid)
         
         Inputs:
@@ -205,8 +246,6 @@ class aep_calc():
                 Wind turbine rotor diameter(s) in meters
             grid_spc : float
                 Spacing between rows and columns in number of rotor diams D
-            plant_cap_MW : float
-                Total wind plant capacity in MW
         
         Returns:
         --------
@@ -215,11 +254,6 @@ class aep_calc():
             layout_y : array_like
                 Y positions of the wind turbines in the plant
         """
-        # Check the plant capacity and number of turbines
-        if plant_cap_MW/wt_cap_MW != n_wt:
-            # Print a warning
-            print('Note n_wt*wt_cap may not agree with total plant capacity.')
-        
         # Initialize layout variables
         layout_x = []
         layout_y = []
