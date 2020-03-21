@@ -595,7 +595,7 @@ class WindRose():
         # Create a dataframe named df
         df= pd.DataFrame({'ws': ws_new,
                           'wd': wd_new})
-                
+        print(np.mean(ws_new))        
         # Start by simply round and wrapping the wind direction and wind speed columns
         df['wd'] = geo.wrap_360(df.wd.round())
         df['ws'] = geo.wrap_360(df.ws.round())

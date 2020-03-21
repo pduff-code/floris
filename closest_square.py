@@ -3,7 +3,7 @@
 # taken from: 
 #  https://www.geeksforgeeks.org/closest-perfect-square-and-its-distance/
 # by sahishelangia     
-# Python3 program to find the closest  
+# Python script to find the closest  
 # perfect square taking minimum steps 
 # to reach from a number  
   
