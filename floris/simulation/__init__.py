@@ -26,8 +26,8 @@ Examples:
     
     >>> dir(floris.simulation)
     ['Farm', 'Floris', 'FlowField', 'InputReader', 'Turbine',
-    'TurbineMap', 'Wake', 'WakeCombination', 'WakeDeflection',
-    'WakeVelocity', '__builtins__', '__cached__', '__doc__',
+    'TurbineMap', 'Wake', 'WakeCombination', 'VelocityDeflection',
+    'VelocityDeficit', '__builtins__', '__cached__', '__doc__',
     '__file__', '__loader__', '__name__', '__package__', '__path__',
     '__spec__', 'farm', 'floris', 'flow_field', 'input_reader',
     'turbine', 'turbine_map', 'wake', 'wake_combination',
@@ -38,9 +38,11 @@ from .farm import Farm
 from .floris import Floris
 from .flow_field import FlowField
 from .input_reader import InputReader
+from .wind_map import WindMap
 from .turbine_map import TurbineMap
 from .turbine import Turbine
-from .wake_combination import WakeCombination
-from .wake_deflection import WakeDeflection
-from .wake_velocity import WakeVelocity
+from . import wake_deflection
+from . import wake_velocity
+from . import wake_combination
+from . import wake_turbulence
 from .wake import Wake

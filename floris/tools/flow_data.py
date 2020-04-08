@@ -12,6 +12,7 @@
 import os
 import numpy as np
 from ..utilities import Vec3, Output
+from sklearn import neighbors
 
 
 class FlowData():
@@ -112,16 +113,16 @@ class FlowData():
         y = ff.y[map_values]
         z = ff.z[map_values]
 
-        
-        dimensions = Vec3(len(np.unique(x)), len(np.unique(y)), len(np.unique(z)))
+        #  Work out new dimensions
+        dimensions = Vec3(len(np.unique(x)), len(np.unique(y)),
+                          len(np.unique(z)))
 
         # Work out origin
-        origin = Vec3(
+        origin = (
             ff.origin.x1 + np.min(x),
             ff.origin.x2 + np.min(y),
             ff.origin.x3 + np.min(z),
         )
-
 
         return FlowData(
             x - np.min(x),
@@ -133,3 +134,17 @@ class FlowData():
             spacing=ff.spacing,  # doesn't change
             dimensions=dimensions,
             origin=origin)
+
+            # Define a quick function for getting arbitrary points from sowfa
+
+
+    def get_points_from_flow_data(self,x_points,y_points,z_points):
+        # print(x_points,y_points,z_points)
+        X = np.column_stack([self.x,self.y,self.z])
+        n_neighbors = 1
+        knn = neighbors.KNeighborsRegressor(n_neighbors)
+        y_ = knn.fit(X, self.u)#.predict(T)
+
+        # Predict new points
+        T = np.column_stack([x_points,y_points,z_points])
+        return knn.predict(T)

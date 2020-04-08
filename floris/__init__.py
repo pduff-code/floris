@@ -40,8 +40,8 @@ Examples:
 
     >>> dir(floris.simulation)
     ['Farm', 'Floris', 'FlowField', 'InputReader', 'Turbine',
-    'TurbineMap', 'Wake', 'WakeCombination', 'WakeDeflection',
-    'WakeVelocity', '__builtins__', '__cached__', '__doc__',
+    'TurbineMap', 'Wake', 'WakeCombination', 'VelocityDeflection',
+    'VelocityDeficit', '__builtins__', '__cached__', '__doc__',
     '__file__', '__loader__', '__name__', '__package__', '__path__',
     '__spec__', 'farm', 'floris', 'flow_field', 'input_reader',
     'turbine', 'turbine_map', 'wake', 'wake_combination',
@@ -50,7 +50,7 @@ Examples:
     >>> dir(floris.tools)
     ['__builtins__', '__cached__', '__doc__', '__file__', '__loader__',
     '__name__', '__package__', '__path__', '__spec__', 'cut_plane',
-    'energy_ratio', 'floris_utilities', 'flow_data',
+    'energy_ratio', 'floris_interface', 'flow_data',
     'layout_functions', 'optimization', 'plotting', 'power_rose',
     'rews', 'sowfa_utilities', 'visualization', 'wind_rose']
 """
@@ -58,3 +58,4 @@ Examples:
 from . import utilities
 from . import simulation
 from . import tools
+from .tools import optimization

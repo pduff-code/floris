@@ -15,7 +15,7 @@ from matplotlib import rcParams
 import numpy as np
 
 
-def plot_turbines(ax, layout_x, layout_y, yaw_angles, D):
+def plot_turbines(ax, layout_x, layout_y, yaw_angles, D, color=None):
     """
     Plot wind plant layout from turbine locations.
 
@@ -26,13 +26,14 @@ def plot_turbines(ax, layout_x, layout_y, yaw_angles, D):
         yaw_angles (np.array): yaw angles of each wind turbine.
         D (float): wind turbine rotor diameter.
     """
+    if color == None: color = 'k'
     for x, y, yaw in zip(layout_x, layout_y, yaw_angles):
         R = D / 2.
         x_0 = x + np.sin(np.deg2rad(yaw)) * R
         x_1 = x - np.sin(np.deg2rad(yaw)) * R
         y_0 = y - np.cos(np.deg2rad(yaw)) * R
         y_1 = y + np.cos(np.deg2rad(yaw)) * R
-        ax.plot([x_0, x_1], [y_0, y_1], color='k')
+        ax.plot([x_0, x_1], [y_0, y_1], color=color)
 
 
 def line_contour_cut_plane(cut_plane,
@@ -58,18 +59,17 @@ def line_contour_cut_plane(cut_plane,
         fig, ax = plt.subplots()
 
     # Reshape UMesh internally
-    u_mesh = cut_plane.u_mesh.reshape(cut_plane.resolution[1],
-                                      cut_plane.resolution[0])
+    x1_mesh = cut_plane.df.x1.values.reshape(cut_plane.resolution[1],
+                                             cut_plane.resolution[0])
+    x2_mesh = cut_plane.df.x2.values.reshape(cut_plane.resolution[1],
+                                             cut_plane.resolution[0])
+    u_mesh = cut_plane.df.u.values.reshape(cut_plane.resolution[1],
+                                           cut_plane.resolution[0])
     Zm = np.ma.masked_where(np.isnan(u_mesh), u_mesh)
     rcParams['contour.negative_linestyle'] = 'solid'
 
     # # Plot the cut-through
-    ax.contour(cut_plane.x1_lin,
-               cut_plane.x2_lin,
-               Zm,
-               levels=levels,
-               colors=colors,
-               **kwargs)
+    ax.contour(x1_mesh, x2_mesh, Zm, levels=levels, colors=colors, **kwargs)
 
     # Make equal axis
     ax.set_aspect('equal')
@@ -103,18 +103,22 @@ def visualize_cut_plane(cut_plane,
     if not ax:
         fig, ax = plt.subplots()
     if minSpeed is None:
-        minSpeed = cut_plane.u_mesh.min()
+        minSpeed = cut_plane.df.u.min()
     if maxSpeed is None:
-        maxSpeed = cut_plane.u_mesh.max()
+        maxSpeed = cut_plane.df.u.max()
 
-    # Reshape UMesh internally
-    u_mesh = cut_plane.u_mesh.reshape(cut_plane.resolution[1],
-                                      cut_plane.resolution[0])
+    # Reshape to 2d for plotting
+    x1_mesh = cut_plane.df.x1.values.reshape(cut_plane.resolution[1],
+                                             cut_plane.resolution[0])
+    x2_mesh = cut_plane.df.x2.values.reshape(cut_plane.resolution[1],
+                                             cut_plane.resolution[0])
+    u_mesh = cut_plane.df.u.values.reshape(cut_plane.resolution[1],
+                                           cut_plane.resolution[0])
     Zm = np.ma.masked_where(np.isnan(u_mesh), u_mesh)
 
     # Plot the cut-through
-    im = ax.pcolormesh(cut_plane.x1_lin,
-                       cut_plane.x2_lin,
+    im = ax.pcolormesh(x1_mesh,
+                       x2_mesh,
                        Zm,
                        cmap=cmap,
                        vmin=minSpeed,
@@ -135,15 +139,19 @@ def visualize_cut_plane(cut_plane,
     return im
 
 
-def visualize_quiver(cut_plane,ax=None,minSpeed=None,maxSpeed=None,downSamp=1,**kw):
-        """ Visualize the scan
+def visualize_quiver(cut_plane,
+                     ax=None,
+                     minSpeed=None,
+                     maxSpeed=None,
+                     downSamp=1,
+                     **kw):
+    """ Visualize the scan
         
         Args:
             ax: axes for plotting, if none, create a new one  
             minSpeed, maxSpeed, values used for plotting, if not provide assume to data max min
         """
-
-        """
+    """
         Visualize the in-plane flows in a cut_plane
 
         Args:
@@ -160,32 +168,34 @@ def visualize_quiver(cut_plane,ax=None,minSpeed=None,maxSpeed=None,downSamp=1,**
         Returns:
             im (plt.pcolormesh): image handle
         """
-        if not ax:
-            fig, ax = plt.subplots()
+    if not ax:
+        fig, ax = plt.subplots()
 
+    # Reshape UMesh internally
+    x1_mesh = cut_plane.df.x1.values.reshape(cut_plane.resolution[1],
+                                                cut_plane.resolution[0])
+    x2_mesh = cut_plane.df.x2.values.reshape(cut_plane.resolution[1],
+                                                cut_plane.resolution[0])
+    v_mesh = cut_plane.df.v.values.reshape(cut_plane.resolution[1],
+                                            cut_plane.resolution[0])
+    w_mesh = cut_plane.df.w.values.reshape(cut_plane.resolution[1],
+                                            cut_plane.resolution[0])
 
-        # # Reshape UMesh internally
-        v_mesh = cut_plane.v_mesh.reshape(cut_plane.resolution[1],
-                                      cut_plane.resolution[0])
-        w_mesh = cut_plane.w_mesh.reshape(cut_plane.resolution[1],
-                                      cut_plane.resolution[0])
-        # Zm = np.ma.masked_where(np.isnan(uMesh),uMesh)
+    # plot the stream plot
+    QV1 = ax.streamplot((x1_mesh[::downSamp, ::downSamp]),
+                    (x2_mesh[::downSamp, ::downSamp]),
+                    v_mesh[::downSamp, ::downSamp],
+                    w_mesh[::downSamp, ::downSamp],
+                    # scale=80.0,
+                    # alpha=0.75,
+                    # **kw
+                    )
 
-        # plot the stream plot
-        QV1 = ax.quiver( (cut_plane.x1_mesh[::downSamp,::downSamp]),
-                   (cut_plane.x2_mesh[::downSamp,::downSamp]),
-                   v_mesh[::downSamp,::downSamp],
-                   w_mesh[::downSamp,::downSamp],
-                   scale=80.0,alpha=0.75,
-                   **kw)
+    # ax.quiverkey(QV1, -.75, -0.4, 1, '1 m/s', coordinates='data')
 
-        ax.quiverkey(QV1, -.75, -0.4, 1, '1 m/s', coordinates='data')
-        # ax.quiverkey(QV1, -3, 1.2, 1, '1 m/s', coordinates='data')
+    # Make equal axis
+    # ax.set_aspect('equal')
 
-        #print(minSpeed,maxSpeed)
-        
-        # Make equal axis
-        ax.set_aspect('equal')
 
 def reverse_cut_plane_x_axis_in_plot(ax):
     """

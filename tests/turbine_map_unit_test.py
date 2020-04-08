@@ -12,7 +12,6 @@ specific language governing permissions and limitations under the License.
 """
 
 import numpy as np
-import copy
 import pytest
 from .sample_inputs import SampleInputs
 from floris.utilities import Vec3
@@ -27,8 +26,8 @@ class TurbineMapTest():
             [10.0, 20.0]  # layout y
         ]
         self.turbines = [
-            copy.deepcopy(Turbine(self.sample_inputs.turbine)),
-            copy.deepcopy(Turbine(self.sample_inputs.turbine))
+            Turbine(self.sample_inputs.turbine),
+            Turbine(self.sample_inputs.turbine)
         ]
         self.instance = self._build_instance()
 
@@ -78,7 +77,7 @@ def test_rotated():
     sample map is rotated by pi about (0, 0).
     """
     test_class = TurbineMapTest()
-    rotated_map = test_class.instance.rotated(180, Vec3(0.0, 0.0, 0.0))
+    rotated_map = test_class.instance.rotated([180, 180], Vec3(0.0, 0.0, 0.0))
     baseline_coordinates = [
         Vec3(0.0, -10.0, 90.0),
         Vec3(-10.0, -20.0, 90.0)
@@ -111,3 +110,4 @@ def test_sorted_in_x_as_list():
         assert pytest.approx(coordinate.x1) == baseline_coordinates[i].x1
         assert pytest.approx(coordinate.x2) == baseline_coordinates[i].x2
         assert pytest.approx(coordinate.x3) == baseline_coordinates[i].x3
+        

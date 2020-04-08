@@ -31,7 +31,7 @@ The wind farm coordinates and some optimization parameters are specified and the
     maximum_ws = 15.0
 
     # Instantiate the FLORIS object
-    fi = wfct.floris_utilities.FlorisInterface("example_input.json")
+    fi = wfct.floris_interface.FlorisInterface("example_input.json")
 
     # Set wind farm to N_row x N_row grid with constant spacing 
     # (2 x 2 grid, 5 D spacing)
@@ -72,7 +72,7 @@ Next, a WindRose object is initialized and a DataFrame containing the frequency 
                                                             en_date = None)
 
     else:
-        df = wind_rose.load('windtoolkit_geo_center_us.p')
+        df = wind_rose.load(os.path.join(file_dir, 'windtoolkit_geo_center_us.p'))
 
 .. image:: ../../_static/images/WindRose_Example.png
 
