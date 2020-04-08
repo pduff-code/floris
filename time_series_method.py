@@ -1,5 +1,6 @@
 # Patrick Duffy
 # NREL 2020
+import os
 import numpy as np
 import pandas as pd
 from datetime import datetime
@@ -7,12 +8,15 @@ import matplotlib.pyplot as plt
 from matplotlib import dates as mpl_dates
 import floris.tools as wfct
 import floris.tools.time_series_utilities as tsu
-from floris.tools.optimization import YawOptimizationWindRose
-
+from floris.tools.optimization.scipy.yaw_wind_rose \
+	import YawOptimizationWindRose
 
 # Instantiate the FLORIS object
-fi = wfct.floris_utilities.FlorisInterface("examples/example_input.json")
-
+file_dir = os.path.dirname(os.path.abspath(__file__))
+print(file_dir)
+fi = wfct.floris_interface.FlorisInterface(
+    os.path.join(file_dir, 'examples/example_input.json')
+)
 # Set wind farm to N_row x N_row grid with constant spacing 
 # (2 x 2 grid, 5 D spacing)
 D = fi.floris.farm.turbines[0].rotor_diameter
@@ -25,7 +29,7 @@ for i in range(N_row):
 		layout_x.append(i*spc*D)
 		layout_y.append(k*spc*D)
 N_turb = len(layout_x)
-fi.reinitialize_flow_field(layout_array=(layout_x, layout_y),wind_direction=270.0,wind_speed=8.0)
+fi.reinitialize_flow_field(layout_array=(layout_x, layout_y),wind_direction=[270.0],wind_speed=[8.0])
 fi.calculate_wake()
 
 # Import wind speed data 
